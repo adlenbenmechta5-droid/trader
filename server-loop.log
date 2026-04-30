@@ -1,9 +1,9 @@
+Started server PID: 16295
 ▲ Next.js 16.1.3 (Turbopack)
 - Local:         http://localhost:3000
 - Network:       http://0.0.0.0:3000
 - Environments: .env.local, .env
 
 ✓ Starting...
-✓ Ready in 711ms
- GET / 200 in 1535ms (compile: 1346ms, render: 189ms)
- GET / 200 in 51ms (compile: 5ms, render: 46ms)
+✓ Ready in 793ms
+ GET / 200 in 1469ms (compile: 1273ms, render: 197ms)
