@@ -48,10 +48,10 @@ interface ChatPanelProps {
 function getDirectionIcon(direction?: string) {
   if (!direction) return <Minus className="w-4 h-4 text-muted-foreground" />;
   const d = direction.toLowerCase();
-  if (d.includes('\u0635\u0639\u0648\u062f') || d.includes('bullish') || d.includes('\u0634\u0631\u0627\u0621') || d.includes('buy')) {
+  if (d.includes('صعود') || d.includes('bullish') || d.includes('شراء') || d.includes('buy')) {
     return <TrendingUp className="w-4 h-4 text-emerald-400" />;
   }
-  if (d.includes('\u0647\u0628\u0648\u0637') || d.includes('bearish') || d.includes('\u0628\u064a\u0639') || d.includes('sell')) {
+  if (d.includes('هبوط') || d.includes('bearish') || d.includes('بيع') || d.includes('sell')) {
     return <TrendingDown className="w-4 h-4 text-red-400" />;
   }
   return <Minus className="w-4 h-4 text-yellow-400" />;
@@ -126,17 +126,17 @@ export function ChatPanel({ onSymbolAnalyzed }: ChatPanelProps) {
 
   const generateTradePlanImage = useCallback(async (symbol: string, analysisText: string): Promise<string | null> => {
     try {
-      const direction = analysisText.includes('\u0635\u0639\u0648\u062f') || analysisText.includes('bullish') || analysisText.includes('\u0634\u0631\u0627\u0621') || analysisText.includes('buy')
+      const direction = analysisText.includes('صعود') || analysisText.includes('bullish') || analysisText.includes('شراء') || analysisText.includes('buy')
         ? 'buy'
-        : analysisText.includes('\u0647\u0628\u0648\u0637') || analysisText.includes('bearish') || analysisText.includes('\u0628\u064a\u0639') || analysisText.includes('sell')
+        : analysisText.includes('هبوط') || analysisText.includes('bearish') || analysisText.includes('بيع') || analysisText.includes('sell')
         ? 'sell'
         : 'buy';
 
-      const entryPrice = extractField(analysisText, '\u0646\u0642\u0637\u0629 \u0627\u0644\u062f\u062e\u0648\u0644', 'Entry', '\u0627\u0644\u062f\u062e\u0648\u0644');
-      const stopLoss = extractField(analysisText, '\u0648\u0642\u0641 \u0627\u0644\u062e\u0633\u0627\u0631\u0629', 'Stop Loss', '\u0648\u0642\u0641');
-      const tp1 = extractField(analysisText, '\u0647\u062f\u0641 \u0627\u0644\u0631\u0628\u062d', 'Take Profit', 'TP1', '\u0627\u0644\u0647\u062f\u0641 \u0627\u0644\u0623\u0648\u0644');
-      const tp2 = extractField(analysisText, '\u0627\u0644\u0647\u062f\u0641 \u0627\u0644\u062b\u0627\u0646\u064a', 'TP2');
-      const tp3 = extractField(analysisText, '\u0627\u0644\u0647\u062f\u0641 \u0627\u0644\u062b\u0627\u0644\u062b', 'TP3');
+      const entryPrice = extractField(analysisText, 'نقطة الدخول', 'Entry', 'الدخول');
+      const stopLoss = extractField(analysisText, 'وقف الخسارة', 'Stop Loss', 'وقف');
+      const tp1 = extractField(analysisText, 'هدف الربح', 'Take Profit', 'TP1', 'الهدف الأول');
+      const tp2 = extractField(analysisText, 'الهدف الثاني', 'TP2');
+      const tp3 = extractField(analysisText, 'الهدف الثالث', 'TP3');
 
       const res = await fetch('/api/trade-plan', {
         method: 'POST',
@@ -181,7 +181,6 @@ export function ChatPanel({ onSymbolAnalyzed }: ChatPanelProps) {
       if (isSymbol) {
         const chartSymbol = normalizeSymbolForChart(symbol);
 
-        // Add loading message
         const loadingId = (Date.now() + 1).toString();
         const loadingMsg: Message = {
           id: loadingId,
@@ -195,7 +194,6 @@ export function ChatPanel({ onSymbolAnalyzed }: ChatPanelProps) {
         setMessages(prev => [...prev, loadingMsg]);
 
         try {
-          // Step 1: Get AI analysis
           const res = await fetch('/api/analyze', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -217,7 +215,6 @@ export function ChatPanel({ onSymbolAnalyzed }: ChatPanelProps) {
 
           setMessages(prev => prev.map(m => m.id === loadingId ? assistantMsg : m));
 
-          // Step 2: Generate trade plan image
           const tradePlanUrl = await generateTradePlanImage(symbol, analysisText);
 
           setMessages(prev => prev.map(m =>
@@ -232,14 +229,13 @@ export function ChatPanel({ onSymbolAnalyzed }: ChatPanelProps) {
           const errorMsg: Message = {
             id: loadingId,
             role: 'assistant',
-            content: '\u0639\u0630\u0631\u0627\u064b\u060c \u062d\u062f\u062b \u062e\u0637\u0623 \u0641\u064a \u0627\u0644\u062a\u062d\u0644\u064a\u0644. \u064a\u0631\u062c\u0649 \u0627\u0644\u0645\u062d\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062e\u0631\u0649.',
+            content: 'عذراً، حدث خطأ في التحليل. يرجى المحاولة مرة أخرى.',
             symbol,
             timestamp: new Date(),
           };
           setMessages(prev => prev.map(m => m.id === loadingId ? errorMsg : m));
         }
       } else {
-        // Regular chat
         const history = messages.map(m => ({ role: m.role, content: m.content }));
         const res = await fetch('/api/chat', {
           method: 'POST',
@@ -262,7 +258,7 @@ export function ChatPanel({ onSymbolAnalyzed }: ChatPanelProps) {
       const errorMsg: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: '\u0639\u0630\u0631\u0627\u064b\u060c \u062d\u062f\u062b \u062e\u0637\u0623. \u064a\u0631\u062c\u0649 \u0627\u0644\u0645\u062d\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062e\u0631\u0649.',
+        content: 'عذراً، حدث خطأ. يرجى المحاولة مرة أخرى.',
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, errorMsg]);
@@ -280,7 +276,6 @@ export function ChatPanel({ onSymbolAnalyzed }: ChatPanelProps) {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Messages */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center gap-6 py-12">
@@ -295,9 +290,9 @@ export function ChatPanel({ onSymbolAnalyzed }: ChatPanelProps) {
             <div className="space-y-3">
               <h2 className="text-xl font-bold text-foreground">TradeX AI</h2>
               <p className="text-muted-foreground max-w-md leading-relaxed">
-                \u0648\u0643\u064a\u0644 \u0627\u0644\u062a\u062f\u0627\u0648\u0644 \u0627\u0644\u0630\u0643\u064a \u0627\u0644\u0645\u062f\u0631\u0628 \u0639\u0644\u0649 6 \u0643\u062a\u0628 \u0645\u062a\u062e\u0635\u0635\u0629. \u0623\u0631\u0633\u0644 \u0631\u0645\u0632 \u0639\u0645\u0644\u0629 \u0645\u062b\u0644{' '}
-                <Badge variant="outline" className="mx-1 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10">BTC</Badge>{' '}
-                \u0644\u0644\u062d\u0635\u0648\u0644 \u0639\u0644\u0649 \u062a\u062d\u0644\u064a\u0644 \u0641\u0648\u0631\u064a \u0645\u0639 \u0635\u0648\u0631\u0629 \u062e\u0637\u0629 \u0627\u0644\u062a\u062f\u0627\u0648\u0644.
+                {"وكيل التداول الذكي المدرب على 6 كتب متخصصة. أرسل رمز عملة مثل "}
+                <Badge variant="outline" className="mx-1 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10">BTC</Badge>
+                {" للحصول على تحليل فوري مع صورة خطة التداول."}
               </p>
             </div>
             <div className="grid grid-cols-3 gap-2 max-w-md">
@@ -306,7 +301,7 @@ export function ChatPanel({ onSymbolAnalyzed }: ChatPanelProps) {
                   key={s}
                   variant="outline"
                   className="border-border/50 hover:border-emerald-500/50 hover:bg-emerald-500/5 text-sm"
-                  onClick={() => { setInput(`\u062d\u0644\u0644 \u0644\u064a ${s}`); textareaRef.current?.focus(); }}
+                  onClick={() => { setInput(`حلل لي ${s}`); textareaRef.current?.focus(); }}
                 >
                   <BarChart3 className="w-3 h-3 ml-1" />
                   {s}
@@ -335,8 +330,8 @@ export function ChatPanel({ onSymbolAnalyzed }: ChatPanelProps) {
                   <div className="flex items-center gap-3">
                     <Loader2 className="w-5 h-5 text-emerald-400 animate-spin" />
                     <div>
-                      <p className="text-sm font-medium text-foreground">\u062c\u0627\u0631\u064a \u062a\u062d\u0644\u064a\u0644 {msg.symbol}...</p>
-                      <p className="text-xs text-muted-foreground mt-1">\u064a\u0641\u062d\u0635 \u0627\u0644\u0645\u0624\u0634\u0631\u0627\u062a \u0648\u0627\u0644\u0623\u0646\u0645\u0627\u0637 \u0627\u0644\u0641\u0646\u064a\u0629</p>
+                      <p className="text-sm font-medium text-foreground">{"جاري تحليل "}{msg.symbol}{"..."}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{"يفحص المؤشرات والأنماط الفنية"}</p>
                     </div>
                   </div>
                 </Card>
@@ -344,7 +339,6 @@ export function ChatPanel({ onSymbolAnalyzed }: ChatPanelProps) {
                 <Card className={`bg-card border-border overflow-hidden ${
                   msg.role === 'user' ? 'bg-secondary' : ''
                 }`}>
-                  {/* Symbol header bar */}
                   {msg.symbol && msg.role === 'assistant' && (
                     <div className="px-4 py-2.5 border-b border-border/50 bg-gradient-to-r from-emerald-500/5 to-transparent flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -353,7 +347,7 @@ export function ChatPanel({ onSymbolAnalyzed }: ChatPanelProps) {
                         </div>
                         <span className="text-sm font-bold text-foreground">{msg.symbol}</span>
                         <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-border/50 text-muted-foreground">
-                          \u062a\u062d\u0644\u064a\u0644 \u0641\u0646\u064a
+                          {"تحليل فني"}
                         </Badge>
                         {getDirectionIcon(msg.content)}
                       </div>
@@ -365,7 +359,7 @@ export function ChatPanel({ onSymbolAnalyzed }: ChatPanelProps) {
                           onClick={() => setShowChart(msg.chartSymbol ? { symbol: msg.symbol!, chartSymbol: msg.chartSymbol } : null)}
                         >
                           <BarChart3 className="w-3 h-3 ml-1" />
-                          \u0631\u0633\u0645 \u0628\u064a\u0627\u0646\u064a
+                          {"رسم بياني"}
                         </Button>
                         {msg.tradePlanUrl && (
                           <Button
@@ -375,20 +369,19 @@ export function ChatPanel({ onSymbolAnalyzed }: ChatPanelProps) {
                             onClick={() => setLightboxImage(msg.tradePlanUrl!)}
                           >
                             <ImageIcon className="w-3 h-3 ml-1" />
-                            \u062e\u0637\u0629 \u0627\u0644\u062a\u062f\u0627\u0648\u0644
+                            {"خطة التداول"}
                           </Button>
                         )}
                       </div>
                     </div>
                   )}
 
-                  {/* Trade Plan Image - PROMINENTLY DISPLAYED */}
                   {msg.tradePlanUrl && msg.role === 'assistant' && (
                     <div className="border-b border-border/50 bg-[#0a0e17]">
                       <div className="px-3 py-2 flex items-center justify-between">
                         <div className="flex items-center gap-1.5">
                           <Target className="w-3.5 h-3.5 text-emerald-400" />
-                          <span className="text-[11px] font-semibold text-foreground">\u062e\u0637\u0629 \u0627\u0644\u062a\u062f\u0627\u0648\u0644 - Trade Plan</span>
+                          <span className="text-[11px] font-semibold text-foreground">{"خطة التداول - Trade Plan"}</span>
                         </div>
                         <Button
                           variant="ghost"
@@ -397,7 +390,7 @@ export function ChatPanel({ onSymbolAnalyzed }: ChatPanelProps) {
                           onClick={() => setLightboxImage(msg.tradePlanUrl!)}
                         >
                           <Eye className="w-3 h-3 ml-1" />
-                          \u062d\u062c\u0645 \u0643\u0627\u0645\u0644
+                          {"حجم كامل"}
                         </Button>
                       </div>
                       <div
@@ -413,35 +406,32 @@ export function ChatPanel({ onSymbolAnalyzed }: ChatPanelProps) {
                         <div className="absolute inset-3 rounded-lg bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
                           <div className="flex items-center gap-2 bg-black/70 backdrop-blur-sm px-4 py-2.5 rounded-lg">
                             <Eye className="w-5 h-5 text-white" />
-                            <span className="text-white text-sm font-medium">\u0639\u0631\u0636 \u0628\u0627\u0644\u062d\u062c\u0645 \u0627\u0644\u0643\u0627\u0645\u0644</span>
+                            <span className="text-white text-sm font-medium">{"عرض بالحجم الكامل"}</span>
                           </div>
                         </div>
                       </div>
                     </div>
                   )}
 
-                  {/* Generating image indicator */}
                   {msg.isGeneratingImage && (
                     <div className="border-b border-border/50 p-4 bg-[#0a0e17]">
                       <div className="flex items-center gap-3 justify-center">
                         <Loader2 className="w-5 h-5 text-emerald-400 animate-spin" />
-                        <p className="text-sm text-muted-foreground">\u062c\u0627\u0631\u064a \u0625\u0646\u0634\u0627\u0621 \u0635\u0648\u0631\u0629 \u062e\u0637\u0629 \u0627\u0644\u062a\u062f\u0627\u0648\u0644...</p>
+                        <p className="text-sm text-muted-foreground">{"جاري إنشاء صورة خطة التداول..."}</p>
                       </div>
                     </div>
                   )}
 
-                  {/* Text Analysis Content */}
                   <div className="p-4">
                     {msg.role === 'user' ? (
                       <p className="text-sm text-foreground">{msg.content}</p>
                     ) : msg.content ? (
                       <>
-                        {/* Analysis text toggle */}
                         {msg.symbol && msg.tradePlanUrl && (
                           <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center gap-1.5">
                               <FileText className="w-3.5 h-3.5 text-blue-400" />
-                              <span className="text-[11px] font-semibold text-foreground">\u0627\u0644\u062a\u062d\u0644\u064a\u0644 \u0627\u0644\u0645\u0641\u0635\u0644</span>
+                              <span className="text-[11px] font-semibold text-foreground">{"التحليل المفصل"}</span>
                             </div>
                             <Button
                               variant="ghost"
@@ -450,9 +440,9 @@ export function ChatPanel({ onSymbolAnalyzed }: ChatPanelProps) {
                               onClick={() => setExpandedAnalysis(expandedAnalysis === msg.id ? null : msg.id)}
                             >
                               {expandedAnalysis === msg.id ? (
-                                <><ChevronUp className="w-3 h-3 ml-1" />\u0625\u062e\u0641\u0627\u0621</>
+                                <><ChevronUp className="w-3 h-3 ml-1" />{"إخفاء"}</>
                               ) : (
-                                <><ChevronDown className="w-3 h-3 ml-1" />\u0639\u0631\u0636 \u0627\u0644\u0643\u0627\u0645\u0644</>
+                                <><ChevronDown className="w-3 h-3 ml-1" />{"عرض الكامل"}</>
                               )}
                             </Button>
                           </div>
@@ -475,7 +465,6 @@ export function ChatPanel({ onSymbolAnalyzed }: ChatPanelProps) {
         ))}
       </div>
 
-      {/* Lightbox for full-size image */}
       {lightboxImage && (
         <div
           className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
@@ -489,7 +478,7 @@ export function ChatPanel({ onSymbolAnalyzed }: ChatPanelProps) {
               onClick={() => setLightboxImage(null)}
             >
               <X className="w-5 h-5 ml-1" />
-              \u0625\u063a\u0644\u0627\u0642
+              {"إغلاق"}
             </Button>
             <Button
               variant="ghost"
@@ -506,7 +495,7 @@ export function ChatPanel({ onSymbolAnalyzed }: ChatPanelProps) {
               }}
             >
               <Download className="w-5 h-5 ml-1" />
-              \u062a\u062d\u0645\u064a\u0644
+              {"تحميل"}
             </Button>
             <img
               src={lightboxImage}
@@ -517,7 +506,6 @@ export function ChatPanel({ onSymbolAnalyzed }: ChatPanelProps) {
         </div>
       )}
 
-      {/* Chart Display - Full Screen Modal */}
       {showChart && !lightboxImage && (
         <div
           className="fixed inset-0 z-50 bg-[#0a0e17] flex flex-col animate-in fade-in duration-200"
@@ -536,7 +524,7 @@ export function ChatPanel({ onSymbolAnalyzed }: ChatPanelProps) {
                 className="text-xs text-blue-400 hover:text-blue-300 underline"
                 onClick={(e) => e.stopPropagation()}
               >
-                \u0641\u062a\u062d \u0641\u064a TradingView
+                {"فتح في TradingView"}
               </a>
               <Button
                 variant="ghost"
@@ -545,7 +533,7 @@ export function ChatPanel({ onSymbolAnalyzed }: ChatPanelProps) {
                 onClick={(e) => { e.stopPropagation(); setShowChart(null); }}
               >
                 <X className="w-4 h-4 ml-1" />
-                \u0625\u063a\u0644\u0627\u0642
+                {"إغلاق"}
               </Button>
             </div>
           </div>
@@ -555,7 +543,6 @@ export function ChatPanel({ onSymbolAnalyzed }: ChatPanelProps) {
         </div>
       )}
 
-      {/* Input */}
       <div className="border-t border-border p-4">
         <div className="flex gap-2 items-end">
           <div className="flex-1 relative">
@@ -564,7 +551,7 @@ export function ChatPanel({ onSymbolAnalyzed }: ChatPanelProps) {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="\u0627\u0643\u062a\u0628 \u0631\u0645\u0632 \u0627\u0644\u0639\u0645\u0644\u0629 \u0623\u0648 \u0633\u0624\u0627\u0644\u0643... (\u0645\u062b\u0627\u0644: \u062d\u0644\u0644 \u0644\u064a BTC)"
+              placeholder={"اكتب رمز العملة أو سؤالك... (مثال: حلل لي BTC)"}
               className="min-h-[44px] max-h-[120px] resize-none bg-secondary border-border focus:border-emerald-500/50 placeholder:text-muted-foreground/50"
               rows={1}
               disabled={isLoading}
@@ -585,7 +572,7 @@ export function ChatPanel({ onSymbolAnalyzed }: ChatPanelProps) {
         <div className="flex items-center justify-center gap-3 mt-2">
           <p className="text-[9px] text-muted-foreground/40 flex items-center gap-1">
             <AlertTriangle className="w-2.5 h-2.5" />
-            \u0627\u0644\u062a\u062d\u0644\u064a\u0644\u0627\u062a \u0644\u0623\u063a\u0631\u0627\u0636 \u062a\u0639\u0644\u064a\u0645\u064a\u0629 \u0641\u0642\u0637 \u0648\u0644\u064a\u0633\u062a \u0646\u0635\u0627\u0626\u062d \u0627\u0633\u062a\u062b\u0645\u0627\u0631\u064a\u0629
+            {"التحليلات لأغراض تعليمية فقط وليست نصائح استثمارية"}
           </p>
           <span className="text-muted-foreground/20">|</span>
           <p className="text-[9px] text-muted-foreground/40 flex items-center gap-1">
