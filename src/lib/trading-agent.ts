@@ -1,5 +1,4 @@
 import ZAI from 'z-ai-web-dev-sdk';
-import { db } from '@/lib/db';
 
 const SYSTEM_PROMPT = `أنت وكيل تداول محترف (Professional Trading Agent) متخصص في تحليل العملات الرقمية (Cryptocurrency) والفوركس (Forex).
 
@@ -49,22 +48,27 @@ async function getZAI() {
 }
 
 export async function getTradingKnowledge(): Promise<string> {
-  const courses = await db.course.findMany({
-    where: { status: 'ready' },
-    select: { title: true, summary: true }
-  });
+  try {
+    const { db } = await import('@/lib/db');
+    const courses = await db.course.findMany({
+      where: { status: 'ready' },
+      select: { title: true, summary: true }
+    });
 
-  if (courses.length === 0) {
-    return 'لا توجد كورسات مرفوعة بعد. ستقوم بتحليل عام بناءً على خبرتك.';
+    if (courses.length === 0) {
+      return '';
+    }
+
+    let knowledge = '## الكتب والكورسات التي درستها:\n\n';
+    for (const course of courses) {
+      knowledge += `### 📚 ${course.title}\n`;
+      knowledge += `${course.summary || 'ملخص غير متوفر'}\n\n`;
+    }
+
+    return knowledge;
+  } catch {
+    return '';
   }
-
-  let knowledge = '## الكتب والكورسات التي درستها:\n\n';
-  for (const course of courses) {
-    knowledge += `### 📚 ${course.title}\n`;
-    knowledge += `${course.summary || 'ملخص غير متوفر'}\n\n`;
-  }
-
-  return knowledge;
 }
 
 export interface AnalysisResult {
@@ -85,11 +89,14 @@ export async function analyzeSymbol(symbol: string): Promise<AnalysisResult> {
   const zai = await getZAI();
   const knowledge = await getTradingKnowledge();
 
+  const knowledgeSection = knowledge
+    ? `${knowledge}\n\nقم بإجراء تحليل فني شامل وأعطني:`
+    : 'قم بإجراء تحليل فني شامل وأعطني:';
+
   const userPrompt = `بناءً على خبراتك والكورسات التي درستها، قم بتحليل شامل للرمز التالي: **${symbol}**
 
-${knowledge}
-
-قم بإجراء تحليل فني شامل وأعطني:
+${knowledge ? knowledge : ''}
+${knowledgeSection}
 1. الاتجاه العام
 2. نقطة الدخول المقترحة
 3. وقف الخسارة
@@ -110,7 +117,6 @@ ${knowledge}
 
   const content = completion.choices[0]?.message?.content || '';
 
-  // Extract structured data from the response
   const result: AnalysisResult = {
     symbol,
     direction: extractField(content, 'الاتجاه', 'Trend') || 'عرضي',
@@ -125,21 +131,26 @@ ${knowledge}
     chartSymbol: normalizeSymbol(symbol),
   };
 
-  // Save to database
-  await db.analysis.create({
-    data: {
-      symbol,
-      direction: result.direction,
-      entryPrice: result.entryPrice,
-      stopLoss: result.stopLoss,
-      takeProfit1: result.takeProfit1,
-      takeProfit2: result.takeProfit2,
-      takeProfit3: result.takeProfit3,
-      confidence: result.confidence,
-      analysis: result.analysis,
-      reasoning: result.reasoning,
-    }
-  });
+  // Try to save to database (optional)
+  try {
+    const { db } = await import('@/lib/db');
+    await db.analysis.create({
+      data: {
+        symbol,
+        direction: result.direction,
+        entryPrice: result.entryPrice,
+        stopLoss: result.stopLoss,
+        takeProfit1: result.takeProfit1,
+        takeProfit2: result.takeProfit2,
+        takeProfit3: result.takeProfit3,
+        confidence: result.confidence,
+        analysis: result.analysis,
+        reasoning: result.reasoning,
+      }
+    });
+  } catch {
+    // DB not available, continue without saving
+  }
 
   return result;
 }
@@ -148,11 +159,11 @@ export async function chatWithAgent(message: string, history: Array<{role: strin
   const zai = await getZAI();
   const knowledge = await getTradingKnowledge();
 
-  const systemMessage = `${SYSTEM_PROMPT}\n\n${knowledge}`;
+  const systemMessage = knowledge ? `${SYSTEM_PROMPT}\n\n${knowledge}` : SYSTEM_PROMPT;
 
   const messages = [
     { role: 'system', content: systemMessage },
-    ...history.slice(-10), // Keep last 10 messages for context
+    ...history.slice(-10),
     { role: 'user', content: message }
   ];
 
@@ -177,8 +188,7 @@ function extractField(text: string, ...keywords: string[]): string | null {
 
 function normalizeSymbol(symbol: string): string {
   const s = symbol.toUpperCase().trim().replace(/\s+/g, '');
-  
-  // Crypto pairs
+
   if (s.includes('BTC') || s.includes('BITCOIN')) return 'BINANCE:BTCUSDT';
   if (s.includes('ETH') || s.includes('ETHEREUM')) return 'BINANCE:ETHUSDT';
   if (s.includes('BNB')) return 'BINANCE:BNBUSDT';
@@ -197,7 +207,6 @@ function normalizeSymbol(symbol: string): string {
   if (s.includes('LTC')) return 'BINANCE:LTCUSDT';
   if (s.includes('NEAR')) return 'BINANCE:NEARUSDT';
 
-  // Forex pairs
   if (s.includes('EURUSD') || s === 'EUR/USD') return 'FX:EURUSD';
   if (s.includes('GBPUSD') || s === 'GBP/USD') return 'FX:GBPUSD';
   if (s.includes('USDJPY') || s === 'USD/JPY') return 'FX:USDJPY';
@@ -210,6 +219,5 @@ function normalizeSymbol(symbol: string): string {
   if (s.includes('GBPJPY') || s === 'GBP/JPY') return 'FX:GBPJPY';
   if (s.includes('GOLD') || s.includes('XAUUSD')) return 'OANDA:XAUUSD';
 
-  // Default: try as crypto
   return `BINANCE:${s}USDT`;
 }

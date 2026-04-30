@@ -1,3 +1,5 @@
+import fs from 'fs';
+
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const pdfParse = require('pdf-parse');
 
@@ -7,15 +9,12 @@ export async function extractTextFromPDFBuffer(buffer: Buffer): Promise<string> 
 }
 
 export async function extractTextFromPDF(filePath: string): Promise<string> {
-  // For backward compatibility, dynamically import fs only when needed
-  const fs = await import('fs');
   const dataBuffer = fs.readFileSync(filePath);
   const data = await pdfParse(dataBuffer);
   return data.text;
 }
 
 export function summarizeText(text: string, maxLength: number = 8000): string {
-  // Clean and normalize text
   const cleaned = text
     .replace(/\s+/g, ' ')
     .replace(/[\r\n]+/g, ' ')
@@ -23,14 +22,12 @@ export function summarizeText(text: string, maxLength: number = 8000): string {
 
   if (cleaned.length <= maxLength) return cleaned;
 
-  // Take first portion which usually contains key concepts
   return cleaned.substring(0, maxLength) + '...[truncated]';
 }
 
 export function extractKeyConcepts(text: string): string[] {
   const concepts: string[] = [];
-  
-  // Trading-specific patterns
+
   const patterns = [
     /support and resistance/gi,
     /moving average/gi,

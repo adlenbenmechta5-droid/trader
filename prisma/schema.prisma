@@ -8,11 +8,11 @@ datasource db {
 }
 
 model Course {
-  id        String   @id @default(uuid()) @db.Uuid
+  id        String   @id @default(uuid())
   title     String
   filename  String
-  content   String
-  summary   String?
+  content   String   @db.Text
+  summary   String?  @db.Text
   fileSize  Int
   status    String   @default("processing")
   createdAt DateTime @default(now())
@@ -20,7 +20,7 @@ model Course {
 }
 
 model Analysis {
-  id          String   @id @default(uuid()) @db.Uuid
+  id          String   @id @default(uuid())
   symbol      String
   type        String   @default("crypto")
   timeframe   String   @default("1D")
@@ -31,17 +31,8 @@ model Analysis {
   takeProfit2 String?
   takeProfit3 String?
   confidence  String?
-  analysis    String
+  analysis    String   @db.Text
   chartUrl    String?
-  reasoning   String
+  reasoning   String   @db.Text
   createdAt   DateTime @default(now())
-}
-
-model ChatMessage {
-  id        String   @id @default(uuid()) @db.Uuid
-  role      String
-  content   String
-  symbol    String?
-  imageUrl  String?
-  createdAt DateTime @default(now())
 }
