@@ -1,8 +1,11 @@
+$ next dev -p 3000 2>&1 | tee dev.log
 ▲ Next.js 16.1.3 (Turbopack)
-- Local:         http://localhost:3001
-- Network:       http://21.0.12.99:3001
-- Environments: .env
+- Local:         http://localhost:3000
+- Network:       http://21.0.12.99:3000
+- Environments: .env.local, .env
 
 ✓ Starting...
-✓ Ready in 651ms
- POST /api/trade-plan 200 in 458ms (compile: 217ms, render: 241ms)
+✓ Ready in 706ms
+ GET / 200 in 1442ms (compile: 1236ms, render: 205ms)
+prisma:query SELECT `main`.`Course`.`id`, `main`.`Course`.`title`, `main`.`Course`.`filename`, `main`.`Course`.`content`, `main`.`Course`.`summary`, `main`.`Course`.`fileSize`, `main`.`Course`.`status`, `main`.`Course`.`createdAt`, `main`.`Course`.`updatedAt` FROM `main`.`Course` WHERE 1=1 ORDER BY `main`.`Course`.`createdAt` DESC LIMIT ? OFFSET ?
+ GET /api/courses 200 in 146ms (compile: 57ms, render: 89ms)
