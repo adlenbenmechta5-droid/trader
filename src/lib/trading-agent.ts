@@ -1,4 +1,5 @@
 import ZAI from 'z-ai-web-dev-sdk';
+import { getKnowledgeText } from '@/lib/store';
 
 const SYSTEM_PROMPT = `أنت وكيل تداول محترف (Professional Trading Agent) متخصص في تحليل العملات الرقمية (Cryptocurrency) والفوركس (Forex).
 
@@ -47,30 +48,6 @@ async function getZAI() {
   return zaiInstance;
 }
 
-export async function getTradingKnowledge(): Promise<string> {
-  try {
-    const { db } = await import('@/lib/db');
-    const courses = await db.course.findMany({
-      where: { status: 'ready' },
-      select: { title: true, summary: true }
-    });
-
-    if (courses.length === 0) {
-      return '';
-    }
-
-    let knowledge = '## الكتب والكورسات التي درستها:\n\n';
-    for (const course of courses) {
-      knowledge += `### 📚 ${course.title}\n`;
-      knowledge += `${course.summary || 'ملخص غير متوفر'}\n\n`;
-    }
-
-    return knowledge;
-  } catch {
-    return '';
-  }
-}
-
 export interface AnalysisResult {
   symbol: string;
   direction: string;
@@ -87,7 +64,7 @@ export interface AnalysisResult {
 
 export async function analyzeSymbol(symbol: string): Promise<AnalysisResult> {
   const zai = await getZAI();
-  const knowledge = await getTradingKnowledge();
+  const knowledge = getKnowledgeText();
 
   const knowledgeSection = knowledge
     ? `${knowledge}\n\nقم بإجراء تحليل فني شامل وأعطني:`
@@ -131,33 +108,12 @@ ${knowledgeSection}
     chartSymbol: normalizeSymbol(symbol),
   };
 
-  // Try to save to database (optional)
-  try {
-    const { db } = await import('@/lib/db');
-    await db.analysis.create({
-      data: {
-        symbol,
-        direction: result.direction,
-        entryPrice: result.entryPrice,
-        stopLoss: result.stopLoss,
-        takeProfit1: result.takeProfit1,
-        takeProfit2: result.takeProfit2,
-        takeProfit3: result.takeProfit3,
-        confidence: result.confidence,
-        analysis: result.analysis,
-        reasoning: result.reasoning,
-      }
-    });
-  } catch {
-    // DB not available, continue without saving
-  }
-
   return result;
 }
 
 export async function chatWithAgent(message: string, history: Array<{role: string, content: string}> = []): Promise<string> {
   const zai = await getZAI();
-  const knowledge = await getTradingKnowledge();
+  const knowledge = getKnowledgeText();
 
   const systemMessage = knowledge ? `${SYSTEM_PROMPT}\n\n${knowledge}` : SYSTEM_PROMPT;
 
