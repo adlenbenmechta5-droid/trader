@@ -20,14 +20,14 @@ You have studied 6 specialized trading books and apply best practices from all o
 5. Write the analysis in Arabic with English technical terms in parentheses
 6. Structure your analysis clearly with sections and bullet points
 
-## Analysis Format (MUST follow exactly - use these EXACT lines):
-DIRECTION: Bullish or Bearish or Neutral
-ENTRY: [the exact price as a plain number, e.g. 63,500 or 1.0850]
-STOPLOSS: [the exact price as a plain number]
-TP1: [the exact price as a plain number]
-TP2: [the exact price as a plain number]
-TP3: [the exact price as a plain number]
-CONFIDENCE: High or Medium or Low
+**IMPORTANT: Your response MUST start EXACTLY with these 7 lines before anything else:**
+DIRECTION: [Bullish or Bearish or Neutral]
+ENTRY: [exact price number like 63,500 or 1.0850]
+STOPLOSS: [exact price number]
+TP1: [exact price number]
+TP2: [exact price number]
+TP3: [exact price number]
+CONFIDENCE: [High or Medium or Low]
 
 Then write the detailed analysis below with:
 📊 **الاتجاه العام (Overall Trend)**: [explanation]
@@ -90,7 +90,17 @@ export async function analyzeSymbol(symbol: string): Promise<AnalysisResult> {
 
   const userPrompt = `قم بتحليل الرمز التالي: **${symbol}**
 
-**مهم جداً:** يجب أن تستند تحليلك بشكل مباشر للمعلومات والمفاهيم من الكتب الستة التي درستها. اذكر اسم الكتاب والمفهوم الذي تستخدمه. أظهر للقارئ أنك متخصص فعلاً وتستخدم المعرفة المكتسبة من الكتب الست.
+**مهم جداً:** يجب أن تبدأ إجابتك بالأسطر السبعة التالية بالضبط قبل أي شيء آخر:
+
+DIRECTION: [Bullish أو Bearish أو Neutral]
+ENTRY: [السعر الدقيق كرقم مثل 63,500 أو 1.0850]
+STOPLOSS: [السعر الدقيق]
+TP1: [السعر الدقيق]
+TP2: [السعر الدقيق]
+TP3: [السعر الدقيق]
+CONFIDENCE: [High أو Medium أو Low]
+
+بعد هذه الأسطر السبعة، اكتب التحليل المفصل بالعربية مع المصطلحات الإنجليزية بين قوسين.
 
 ${knowledge ? `=== معرفتك من الكتب الستة ===\n${knowledge}\n=== نهاية المعرفة ===` : ''}
 
@@ -119,15 +129,15 @@ ${knowledge ? `=== معرفتك من الكتب الستة ===\n${knowledge}\n==
 
   const content = completion.choices[0]?.message?.content || '';
 
-  // Extract structured data from the simple header lines
+  // Extract structured data - try simple header first, then fallback to Arabic text
   const result: AnalysisResult = {
     symbol,
     direction: extractField(content, 'DIRECTION:') || extractField(content, 'الاتجاه', 'Trend') || 'Neutral',
-    entryPrice: extractPrice(content, 'ENTRY:'),
-    stopLoss: extractPrice(content, 'STOPLOSS:', 'STOP LOSS:', 'Stop Loss'),
-    takeProfit1: extractPrice(content, 'TP1:'),
-    takeProfit2: extractPrice(content, 'TP2:'),
-    takeProfit3: extractPrice(content, 'TP3:'),
+    entryPrice: extractPrice(content, 'ENTRY:') || extractPrice(content, 'نقطة الدخول', 'Entry'),
+    stopLoss: extractPrice(content, 'STOPLOSS:', 'STOP LOSS:') || extractPrice(content, 'وقف الخسارة', 'Stop Loss'),
+    takeProfit1: extractPrice(content, 'TP1:') || extractPrice(content, 'هدف الربح الأول', 'Take Profit 1'),
+    takeProfit2: extractPrice(content, 'TP2:') || extractPrice(content, 'هدف الربح الثاني', 'Take Profit 2'),
+    takeProfit3: extractPrice(content, 'TP3:') || extractPrice(content, 'هدف الربح الثالث', 'Take Profit 3'),
     confidence: extractField(content, 'CONFIDENCE:') || extractField(content, 'الثقة', 'Confidence') || 'Medium',
     // Clean the analysis: remove the raw DIRECTION/ENTRY/STOPLOSS/TP/CONFIDENCE lines
     analysis: content
@@ -194,21 +204,21 @@ function extractField(text: string, ...keywords: string[]): string | null {
 
 function extractPrice(text: string, ...keywords: string[]): string {
   for (const keyword of keywords) {
-    const area = findKeywordArea(text, keyword, 200);
+    const area = findKeywordArea(text, keyword, 300);
     if (!area) continue;
-    // Look for a price number pattern: digits possibly with commas and decimals
-    // Matches: 63,500 | 1.0850 | 0.6321 | 2,345.67 | $63,500
+    // Skip the keyword line itself, look at what comes after
+    const afterKey = area.replace(new RegExp('^' + keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'), '');
+    // Price patterns ordered from most specific to least specific:
     const pricePatterns = [
-      /\$(\d{1,3}(?:,\d{3})*(?:\.\d+)?)/,   // $63,500
-      /(\d{1,3}(?:,\d{3})*(?:\.\d+))/,           // 63,500 or 1.0850
-      /(\d+\.\d{2,4})/,                             // 1.0850 or 0.6321
-      /(\d{4,})/,                                    // 63500
+      /\$(\d{1,3}(?:,\d{3})+(?:\.\d+)?)/,   // $63,500 or $1,234.56
+      /(\d{1,3}(?:,\d{3})+(?:\.\d+)?)/,       // 63,500 or 1,234.56
+      /(\d+\.\d{2,6})/,                         // 1.0850 or 0.6321 or 1234.56
+      /(\d{3,})/,                                // 63500
     ];
     for (const pattern of pricePatterns) {
-      const match = area.match(pattern);
+      const match = afterKey.match(pattern);
       if (match && match[1]) {
         const price = match[1].trim();
-        // Validate it looks like a reasonable price
         if (price.length >= 2) {
           return price;
         }
