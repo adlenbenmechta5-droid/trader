@@ -20,21 +20,28 @@ You have studied 6 specialized trading books and apply best practices from all o
 5. Write the analysis in Arabic with English technical terms in parentheses
 6. Structure your analysis clearly with sections and bullet points
 
-## Analysis Format (MUST follow exactly):
-📊 **الاتجاه العام (Overall Trend)**: [Bullish/Bearish/Neutral with detailed explanation citing book concepts]
+## Analysis Format (MUST follow exactly - use these EXACT lines):
+DIRECTION: Bullish or Bearish or Neutral
+ENTRY: [the exact price as a plain number, e.g. 63,500 or 1.0850]
+STOPLOSS: [the exact price as a plain number]
+TP1: [the exact price as a plain number]
+TP2: [the exact price as a plain number]
+TP3: [the exact price as a plain number]
+CONFIDENCE: High or Medium or Low
 
-🎯 **نقطة الدخول (Entry Point)**: [Exact price number]
+Then write the detailed analysis below with:
+📊 **الاتجاه العام (Overall Trend)**: [explanation]
 
-🛑 **وقف الخسارة (Stop Loss)**: [Exact price number - explain why based on support/resistance from books]
+🎯 **نقطة الدخول (Entry)**: [price and reasoning]
 
-💰 **أهداف الربح (Take Profit Targets)**:
+🛑 **وقف الخسارة (Stop Loss)**: [price and reasoning]
+
+💰 **أهداف الربح (Take Profit)**:
 - TP1: [price] - [rationale]
 - TP2: [price] - [rationale]
 - TP3: [price] - [rationale]
 
-📈 **مستوى الثقة (Confidence Level)**: [High/Medium/Low with justification]
-
-📐 **نسبة المخاطرة للعائد (Risk:Reward Ratio)**: [calculate and state]
+📐 **نسبة المخاطرة للعائد (Risk:Reward)**: [ratio]
 
 📝 **التفاصيل والسببية (Detailed Reasoning)**:
 [Minimum 300 words of detailed analysis covering:]
@@ -112,16 +119,26 @@ ${knowledge ? `=== معرفتك من الكتب الستة ===\n${knowledge}\n==
 
   const content = completion.choices[0]?.message?.content || '';
 
+  // Extract structured data from the simple header lines
   const result: AnalysisResult = {
     symbol,
-    direction: extractField(content, 'الاتجاه', 'Trend') || 'Neutral',
-    entryPrice: extractPrice(content, 'نقطة الدخول', 'Entry', 'Entry Point'),
-    stopLoss: extractPrice(content, 'وقف الخسارة', 'Stop Loss'),
-    takeProfit1: extractPrice(content, 'TP1', 'هدف الربح الأول', 'Take Profit 1'),
-    takeProfit2: extractPrice(content, 'TP2', 'هدف الربح الثاني', 'Take Profit 2'),
-    takeProfit3: extractPrice(content, 'TP3', 'هدف الربح الثالث', 'Take Profit 3'),
-    confidence: extractField(content, 'الثقة', 'Confidence') || 'Medium',
-    analysis: content,
+    direction: extractField(content, 'DIRECTION:') || extractField(content, 'الاتجاه', 'Trend') || 'Neutral',
+    entryPrice: extractPrice(content, 'ENTRY:'),
+    stopLoss: extractPrice(content, 'STOPLOSS:', 'STOP LOSS:', 'Stop Loss'),
+    takeProfit1: extractPrice(content, 'TP1:'),
+    takeProfit2: extractPrice(content, 'TP2:'),
+    takeProfit3: extractPrice(content, 'TP3:'),
+    confidence: extractField(content, 'CONFIDENCE:') || extractField(content, 'الثقة', 'Confidence') || 'Medium',
+    // Clean the analysis: remove the raw DIRECTION/ENTRY/STOPLOSS/TP/CONFIDENCE lines
+    analysis: content
+      .replace(/^DIRECTION:.*$/im, '')
+      .replace(/^ENTRY:.*$/im, '')
+      .replace(/^STOPLOSS:.*$/im, '')
+      .replace(/^STOP LOSS:.*$/im, '')
+      .replace(/^TP[123]:.*$/im, '')
+      .replace(/^CONFIDENCE:.*$/im, '')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim(),
     reasoning: content,
     chartSymbol: normalizeSymbol(symbol),
   };
@@ -149,12 +166,27 @@ export async function chatWithAgent(message: string, history: Array<{role: strin
   return completion.choices[0]?.message?.content || 'Sorry, I could not process your request.';
 }
 
+/**
+ * Find a keyword in text, then extract the first meaningful value after it.
+ * Handles Arabic + English mixed text where non-matching chars sit between keyword and value.
+ */
+function findKeywordArea(text: string, keyword: string, searchRadius: number = 200): string | null {
+  const idx = text.toLowerCase().indexOf(keyword.toLowerCase());
+  if (idx === -1) return null;
+  return text.substring(idx, Math.min(idx + searchRadius, text.length));
+}
+
 function extractField(text: string, ...keywords: string[]): string | null {
   for (const keyword of keywords) {
-    const regex = new RegExp(`${keyword}[*\\s:]*\\*?[:\\s]*(.*?)(?:\\n|$)`, 'i');
-    const match = text.match(regex);
-    if (match && match[1].trim()) {
-      return match[1].trim().substring(0, 200);
+    const area = findKeywordArea(text, keyword, 200);
+    if (!area) continue;
+    // Remove the keyword itself and any markdown/emoji prefix
+    const afterKeyword = area.replace(/^[^:]{0,80}:?/, '').trim();
+    // Take everything until the next section header (emoji + bold) or newline
+    const lines = afterKeyword.split('\n');
+    const value = lines[0].replace(/^[*\s:-]+/, '').trim();
+    if (value.length > 2) {
+      return value.substring(0, 200);
     }
   }
   return null;
@@ -162,10 +194,25 @@ function extractField(text: string, ...keywords: string[]): string | null {
 
 function extractPrice(text: string, ...keywords: string[]): string {
   for (const keyword of keywords) {
-    const regex = new RegExp(`${keyword}[*\\s:]*\\*?[:\\s]*([\\d,.]+)`, 'i');
-    const match = text.match(regex);
-    if (match && match[1]) {
-      return match[1].trim();
+    const area = findKeywordArea(text, keyword, 200);
+    if (!area) continue;
+    // Look for a price number pattern: digits possibly with commas and decimals
+    // Matches: 63,500 | 1.0850 | 0.6321 | 2,345.67 | $63,500
+    const pricePatterns = [
+      /\$(\d{1,3}(?:,\d{3})*(?:\.\d+)?)/,   // $63,500
+      /(\d{1,3}(?:,\d{3})*(?:\.\d+))/,           // 63,500 or 1.0850
+      /(\d+\.\d{2,4})/,                             // 1.0850 or 0.6321
+      /(\d{4,})/,                                    // 63500
+    ];
+    for (const pattern of pricePatterns) {
+      const match = area.match(pattern);
+      if (match && match[1]) {
+        const price = match[1].trim();
+        // Validate it looks like a reasonable price
+        if (price.length >= 2) {
+          return price;
+        }
+      }
     }
   }
   return 'N/A';

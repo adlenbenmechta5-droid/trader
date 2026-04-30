@@ -341,10 +341,10 @@ export function ChatPanel({ onSymbolAnalyzed }: ChatPanelProps) {
 
                   {/* Trade Plan Summary Table - PROMINENT AND CLEAR */}
                   {msg.symbol && msg.role === 'assistant' && msg.analysisData && !msg.isLoading && (
-                    <div className={`mx-4 mt-4 p-4 rounded-xl border ${getDirectionColor(msg.analysisData.direction)}`}>
-                      <div className="flex items-center gap-2 mb-3">
-                        <Target className="w-4 h-4 text-emerald-400" />
-                        <span className="text-sm font-bold text-foreground uppercase tracking-wide">Trade Plan</span>
+                    <div className={`mx-5 mt-5 p-5 rounded-xl border ${getDirectionColor(msg.analysisData.direction)}`}>
+                      <div className="flex items-center gap-2 mb-4">
+                        <Target className="w-5 h-5 text-emerald-400" />
+                        <span className="text-base font-bold text-foreground uppercase tracking-wide">Trade Plan</span>
                         {msg.analysisData.direction && (
                           <Badge className={`text-xs px-2 py-0.5 ${
                             msg.analysisData.direction.toLowerCase().includes('buy') || msg.analysisData.direction.toLowerCase().includes('bull') || msg.analysisData.direction.toLowerCase().includes('long')
@@ -450,7 +450,7 @@ export function ChatPanel({ onSymbolAnalyzed }: ChatPanelProps) {
                         </Button>
                       </div>
                       <div className="relative">
-                        <TradingViewChart symbol={msg.chartSymbol} height={550} />
+                        <TradingViewChart symbol={msg.chartSymbol} height={650} />
                       </div>
                     </div>
                   )}
