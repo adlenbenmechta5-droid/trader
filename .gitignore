@@ -1,0 +1,9 @@
+# Build artifacts (GitHub limit: 100MB per file)
+node_modules/
+.next/
+out/
+dist/
+build/
+.vercel
+.DS_Store
+*.pem
