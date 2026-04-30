@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { extractTextFromPDF, summarizeText } from '@/lib/pdf-extractor';
+import { extractTextFromPDFBuffer, summarizeText } from '@/lib/pdf-extractor';
 import { db } from '@/lib/db';
 import fs from 'fs';
 import path from 'path';
@@ -13,18 +13,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
     }
 
-    // Save file to upload directory
-    const uploadDir = path.join(process.cwd(), 'upload');
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-
-    const filePath = path.join(uploadDir, file.name);
+    // Read file into buffer
     const buffer = Buffer.from(await file.arrayBuffer());
-    fs.writeFileSync(filePath, buffer);
 
-    // Extract text from PDF
-    const text = await extractTextFromPDF(filePath);
+    // Extract text from PDF buffer directly (no filesystem needed)
+    const text = await extractTextFromPDFBuffer(buffer);
     const summary = summarizeText(text, 12000);
 
     // Create course record

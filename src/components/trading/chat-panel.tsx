@@ -441,10 +441,16 @@ export function ChatPanel({ onSymbolAnalyzed }: ChatPanelProps) {
               size="sm"
               className="absolute -top-10 left-0 text-white/70 hover:text-white hover:bg-white/10"
               onClick={() => {
+                // Handle base64 data URLs for download
+                const href = lightboxImage.startsWith('data:')
+                  ? lightboxImage
+                  : lightboxImage;
                 const a = document.createElement('a');
-                a.href = lightboxImage;
+                a.href = href;
                 a.download = `trade-plan-${Date.now()}.png`;
+                document.body.appendChild(a);
                 a.click();
+                document.body.removeChild(a);
               }}
             >
               <Download className="w-5 h-5 ml-1" />

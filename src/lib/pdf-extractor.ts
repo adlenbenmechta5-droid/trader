@@ -1,9 +1,14 @@
-import fs from 'fs';
-
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const pdfParse = require('pdf-parse');
 
+export async function extractTextFromPDFBuffer(buffer: Buffer): Promise<string> {
+  const data = await pdfParse(buffer);
+  return data.text;
+}
+
 export async function extractTextFromPDF(filePath: string): Promise<string> {
+  // For backward compatibility, dynamically import fs only when needed
+  const fs = await import('fs');
   const dataBuffer = fs.readFileSync(filePath);
   const data = await pdfParse(dataBuffer);
   return data.text;
@@ -43,7 +48,7 @@ export function extractKeyConcepts(text: string): string[] {
     /price action/gi,
     /harmonic pattern/gi,
     /supply and demand/gi,
-    / Elliot wave|elliott wave/gi,
+    /Elliot wave|elliott wave/gi,
     /volume analysis/gi,
     /risk-reward ratio/gi,
     /scalping|day trading|swing trading/gi,

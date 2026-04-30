@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import sharp from 'sharp';
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,7 +12,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Symbol is required' }, { status: 400 });
     }
 
-    const downloadDir = path.join(process.cwd(), 'download', 'trade-plans');
+    // Use /tmp for temp files on Vercel serverless
+    const tmpDir = os.tmpdir();
+    const downloadDir = path.join(tmpDir, 'trade-plans');
     if (!fs.existsSync(downloadDir)) {
       fs.mkdirSync(downloadDir, { recursive: true });
     }
@@ -29,42 +32,24 @@ export async function POST(request: NextRequest) {
       takeProfit3: takeProfit3 || 'N/A',
     });
 
-    const publicUrl = `/api/trade-plan/image?file=${path.basename(outputPath)}`;
+    // Read the image and convert to base64 data URL
+    const imageBuffer = fs.readFileSync(outputPath);
+    const base64 = imageBuffer.toString('base64');
+    const imageUrl = `data:image/png;base64,${base64}`;
+
+    // Clean up temp file
+    try {
+      fs.unlinkSync(outputPath);
+    } catch {
+      // Ignore cleanup errors
+    }
 
     return NextResponse.json({
       success: true,
-      imageUrl: publicUrl,
+      imageUrl,
     });
   } catch (error: any) {
     console.error('Trade plan error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-}
-
-export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const file = searchParams.get('file');
-
-    if (!file) {
-      return NextResponse.json({ error: 'File parameter required' }, { status: 400 });
-    }
-
-    const filePath = path.join(process.cwd(), 'download', 'trade-plans', file);
-
-    if (!fs.existsSync(filePath)) {
-      return NextResponse.json({ error: 'Image not found' }, { status: 404 });
-    }
-
-    const imageBuffer = fs.readFileSync(filePath);
-
-    return new NextResponse(imageBuffer, {
-      headers: {
-        'Content-Type': 'image/png',
-        'Cache-Control': 'public, max-age=3600',
-      },
-    });
-  } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

@@ -3,12 +3,12 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
 model Course {
-  id        String   @id @default(cuid())
+  id        String   @id @default(uuid()) @db.Uuid
   title     String
   filename  String
   content   String
@@ -20,7 +20,7 @@ model Course {
 }
 
 model Analysis {
-  id          String   @id @default(cuid())
+  id          String   @id @default(uuid()) @db.Uuid
   symbol      String
   type        String   @default("crypto")
   timeframe   String   @default("1D")
@@ -38,7 +38,7 @@ model Analysis {
 }
 
 model ChatMessage {
-  id        String   @id @default(cuid())
+  id        String   @id @default(uuid()) @db.Uuid
   role      String
   content   String
   symbol    String?
