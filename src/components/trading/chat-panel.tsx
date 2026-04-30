@@ -23,8 +23,6 @@ import {
   AlertTriangle,
   Target,
   Shield,
-  ChevronDown,
-  ChevronUp,
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { TradingViewChart } from './trading-chart';
@@ -48,10 +46,10 @@ interface ChatPanelProps {
 function getDirectionIcon(direction?: string) {
   if (!direction) return <Minus className="w-4 h-4 text-muted-foreground" />;
   const d = direction.toLowerCase();
-  if (d.includes('صعود') || d.includes('bullish') || d.includes('شراء') || d.includes('buy')) {
+  if (d.includes('up') || d.includes('bullish') || d.includes('buy') || d.includes('صعود') || d.includes('شراء')) {
     return <TrendingUp className="w-4 h-4 text-emerald-400" />;
   }
-  if (d.includes('هبوط') || d.includes('bearish') || d.includes('بيع') || d.includes('sell')) {
+  if (d.includes('down') || d.includes('bearish') || d.includes('sell') || d.includes('هبوط') || d.includes('بيع')) {
     return <TrendingDown className="w-4 h-4 text-red-400" />;
   }
   return <Minus className="w-4 h-4 text-yellow-400" />;
@@ -74,7 +72,6 @@ export function ChatPanel({ onSymbolAnalyzed }: ChatPanelProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [showChart, setShowChart] = useState<{ symbol: string; chartSymbol: string } | null>(null);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
-  const [expandedAnalysis, setExpandedAnalysis] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -229,7 +226,7 @@ export function ChatPanel({ onSymbolAnalyzed }: ChatPanelProps) {
           const errorMsg: Message = {
             id: loadingId,
             role: 'assistant',
-            content: 'عذراً، حدث خطأ في التحليل. يرجى المحاولة مرة أخرى.',
+            content: 'Sorry, analysis failed. Please try again.',
             symbol,
             timestamp: new Date(),
           };
@@ -258,7 +255,7 @@ export function ChatPanel({ onSymbolAnalyzed }: ChatPanelProps) {
       const errorMsg: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: 'عذراً، حدث خطأ. يرجى المحاولة مرة أخرى.',
+        content: 'Sorry, an error occurred. Please try again.',
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, errorMsg]);
@@ -290,9 +287,9 @@ export function ChatPanel({ onSymbolAnalyzed }: ChatPanelProps) {
             <div className="space-y-3">
               <h2 className="text-xl font-bold text-foreground">TradeX AI</h2>
               <p className="text-muted-foreground max-w-md leading-relaxed">
-                {"وكيل التداول الذكي المدرب على 6 كتب متخصصة. أرسل رمز عملة مثل "}
+                {"AI Trading Agent trained on 6 specialized books. Send a symbol like "}
                 <Badge variant="outline" className="mx-1 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10">BTC</Badge>
-                {" للحصول على تحليل فوري مع صورة خطة التداول."}
+                {" to get instant analysis with trade plan image."}
               </p>
             </div>
             <div className="grid grid-cols-3 gap-2 max-w-md">
@@ -301,7 +298,7 @@ export function ChatPanel({ onSymbolAnalyzed }: ChatPanelProps) {
                   key={s}
                   variant="outline"
                   className="border-border/50 hover:border-emerald-500/50 hover:bg-emerald-500/5 text-sm"
-                  onClick={() => { setInput(`حلل لي ${s}`); textareaRef.current?.focus(); }}
+                  onClick={() => { setInput(`Analyze ${s}`); textareaRef.current?.focus(); }}
                 >
                   <BarChart3 className="w-3 h-3 ml-1" />
                   {s}
@@ -330,8 +327,8 @@ export function ChatPanel({ onSymbolAnalyzed }: ChatPanelProps) {
                   <div className="flex items-center gap-3">
                     <Loader2 className="w-5 h-5 text-emerald-400 animate-spin" />
                     <div>
-                      <p className="text-sm font-medium text-foreground">{"جاري تحليل "}{msg.symbol}{"..."}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{"يفحص المؤشرات والأنماط الفنية"}</p>
+                      <p className="text-sm font-medium text-foreground">{"Analyzing "}{msg.symbol}{"..."}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{"Checking indicators and technical patterns"}</p>
                     </div>
                   </div>
                 </Card>
@@ -347,7 +344,7 @@ export function ChatPanel({ onSymbolAnalyzed }: ChatPanelProps) {
                         </div>
                         <span className="text-sm font-bold text-foreground">{msg.symbol}</span>
                         <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-border/50 text-muted-foreground">
-                          {"تحليل فني"}
+                          {"Technical Analysis"}
                         </Badge>
                         {getDirectionIcon(msg.content)}
                       </div>
@@ -359,7 +356,7 @@ export function ChatPanel({ onSymbolAnalyzed }: ChatPanelProps) {
                           onClick={() => setShowChart(msg.chartSymbol ? { symbol: msg.symbol!, chartSymbol: msg.chartSymbol } : null)}
                         >
                           <BarChart3 className="w-3 h-3 ml-1" />
-                          {"رسم بياني"}
+                          {"Chart"}
                         </Button>
                         {msg.tradePlanUrl && (
                           <Button
@@ -369,7 +366,7 @@ export function ChatPanel({ onSymbolAnalyzed }: ChatPanelProps) {
                             onClick={() => setLightboxImage(msg.tradePlanUrl!)}
                           >
                             <ImageIcon className="w-3 h-3 ml-1" />
-                            {"خطة التداول"}
+                            {"Trade Plan"}
                           </Button>
                         )}
                       </div>
@@ -381,7 +378,7 @@ export function ChatPanel({ onSymbolAnalyzed }: ChatPanelProps) {
                       <div className="px-3 py-2 flex items-center justify-between">
                         <div className="flex items-center gap-1.5">
                           <Target className="w-3.5 h-3.5 text-emerald-400" />
-                          <span className="text-[11px] font-semibold text-foreground">{"خطة التداول - Trade Plan"}</span>
+                          <span className="text-[11px] font-semibold text-foreground">{"Trade Plan"}</span>
                         </div>
                         <Button
                           variant="ghost"
@@ -390,7 +387,7 @@ export function ChatPanel({ onSymbolAnalyzed }: ChatPanelProps) {
                           onClick={() => setLightboxImage(msg.tradePlanUrl!)}
                         >
                           <Eye className="w-3 h-3 ml-1" />
-                          {"حجم كامل"}
+                          {"Full Size"}
                         </Button>
                       </div>
                       <div
@@ -406,7 +403,7 @@ export function ChatPanel({ onSymbolAnalyzed }: ChatPanelProps) {
                         <div className="absolute inset-3 rounded-lg bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
                           <div className="flex items-center gap-2 bg-black/70 backdrop-blur-sm px-4 py-2.5 rounded-lg">
                             <Eye className="w-5 h-5 text-white" />
-                            <span className="text-white text-sm font-medium">{"عرض بالحجم الكامل"}</span>
+                            <span className="text-white text-sm font-medium">{"View Full Size"}</span>
                           </div>
                         </div>
                       </div>
@@ -417,7 +414,7 @@ export function ChatPanel({ onSymbolAnalyzed }: ChatPanelProps) {
                     <div className="border-b border-border/50 p-4 bg-[#0a0e17]">
                       <div className="flex items-center gap-3 justify-center">
                         <Loader2 className="w-5 h-5 text-emerald-400 animate-spin" />
-                        <p className="text-sm text-muted-foreground">{"جاري إنشاء صورة خطة التداول..."}</p>
+                        <p className="text-sm text-muted-foreground">{"Generating trade plan image..."}</p>
                       </div>
                     </div>
                   )}
@@ -428,32 +425,13 @@ export function ChatPanel({ onSymbolAnalyzed }: ChatPanelProps) {
                     ) : msg.content ? (
                       <>
                         {msg.symbol && msg.tradePlanUrl && (
-                          <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center gap-1.5">
-                              <FileText className="w-3.5 h-3.5 text-blue-400" />
-                              <span className="text-[11px] font-semibold text-foreground">{"التحليل المفصل"}</span>
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 px-2 text-[9px] text-muted-foreground hover:text-foreground hover:bg-secondary"
-                              onClick={() => setExpandedAnalysis(expandedAnalysis === msg.id ? null : msg.id)}
-                            >
-                              {expandedAnalysis === msg.id ? (
-                                <><ChevronUp className="w-3 h-3 ml-1" />{"إخفاء"}</>
-                              ) : (
-                                <><ChevronDown className="w-3 h-3 ml-1" />{"عرض الكامل"}</>
-                              )}
-                            </Button>
+                          <div className="flex items-center gap-1.5 mb-3">
+                            <FileText className="w-3.5 h-3.5 text-blue-400" />
+                            <span className="text-[11px] font-semibold text-foreground">{"Detailed Analysis"}</span>
                           </div>
                         )}
-                        <div className={`prose prose-invert prose-sm max-w-none analysis-content ${
-                          msg.symbol && msg.tradePlanUrl && expandedAnalysis !== msg.id ? 'max-h-[200px] overflow-hidden relative' : ''
-                        }`}>
+                        <div className="prose prose-invert prose-sm max-w-none analysis-content">
                           <ReactMarkdown>{msg.content}</ReactMarkdown>
-                          {msg.symbol && msg.tradePlanUrl && expandedAnalysis !== msg.id && (
-                            <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-card to-transparent" />
-                          )}
                         </div>
                       </>
                     ) : null}
@@ -478,7 +456,7 @@ export function ChatPanel({ onSymbolAnalyzed }: ChatPanelProps) {
               onClick={() => setLightboxImage(null)}
             >
               <X className="w-5 h-5 ml-1" />
-              {"إغلاق"}
+              {"Close"}
             </Button>
             <Button
               variant="ghost"
@@ -488,14 +466,14 @@ export function ChatPanel({ onSymbolAnalyzed }: ChatPanelProps) {
                 const href = lightboxImage.startsWith('data:') ? lightboxImage : lightboxImage;
                 const a = document.createElement('a');
                 a.href = href;
-                a.download = `trade-plan-${Date.now()}.png`;
+                a.download = `trade-plan-${Date.now()}.svg`;
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
               }}
             >
               <Download className="w-5 h-5 ml-1" />
-              {"تحميل"}
+              {"Download"}
             </Button>
             <img
               src={lightboxImage}
@@ -524,7 +502,7 @@ export function ChatPanel({ onSymbolAnalyzed }: ChatPanelProps) {
                 className="text-xs text-blue-400 hover:text-blue-300 underline"
                 onClick={(e) => e.stopPropagation()}
               >
-                {"فتح في TradingView"}
+                {"Open in TradingView"}
               </a>
               <Button
                 variant="ghost"
@@ -533,7 +511,7 @@ export function ChatPanel({ onSymbolAnalyzed }: ChatPanelProps) {
                 onClick={(e) => { e.stopPropagation(); setShowChart(null); }}
               >
                 <X className="w-4 h-4 ml-1" />
-                {"إغلاق"}
+                {"Close"}
               </Button>
             </div>
           </div>
@@ -551,7 +529,7 @@ export function ChatPanel({ onSymbolAnalyzed }: ChatPanelProps) {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={"اكتب رمز العملة أو سؤالك... (مثال: حلل لي BTC)"}
+              placeholder={"Type a symbol or question... (e.g. Analyze BTC)"}
               className="min-h-[44px] max-h-[120px] resize-none bg-secondary border-border focus:border-emerald-500/50 placeholder:text-muted-foreground/50"
               rows={1}
               disabled={isLoading}
@@ -572,7 +550,7 @@ export function ChatPanel({ onSymbolAnalyzed }: ChatPanelProps) {
         <div className="flex items-center justify-center gap-3 mt-2">
           <p className="text-[9px] text-muted-foreground/40 flex items-center gap-1">
             <AlertTriangle className="w-2.5 h-2.5" />
-            {"التحليلات لأغراض تعليمية فقط وليست نصائح استثمارية"}
+            {"Analysis for educational purposes only, not financial advice"}
           </p>
           <span className="text-muted-foreground/20">|</span>
           <p className="text-[9px] text-muted-foreground/40 flex items-center gap-1">

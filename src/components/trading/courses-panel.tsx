@@ -135,13 +135,13 @@ export function CoursesPanel() {
               <Library className="w-4 h-4 text-emerald-400" />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-foreground">قاعدة المعرفة</h2>
+              <h2 className="text-sm font-bold text-foreground">Knowledge Base</h2>
               <p className="text-[9px] text-muted-foreground -mt-0.5">Knowledge Base</p>
             </div>
           </div>
           <div className="flex items-center gap-1.5">
             <Badge variant="secondary" className="text-[10px] px-2 py-0.5 bg-emerald-500/15 text-emerald-400 border-emerald-500/20 font-bold">
-              {courses.length} كتاب
+              {courses.length} books
             </Badge>
             <Button
               variant="ghost"
@@ -177,7 +177,7 @@ export function CoursesPanel() {
               ) : (
                 <div className="space-y-1">
                   <Upload className="w-5 h-5 text-muted-foreground mx-auto" />
-                  <p className="text-[10px] text-muted-foreground">اسحب ملف PDF هنا</p>
+                  <p className="text-[10px] text-muted-foreground">Drop PDF file here</p>
                 </div>
               )}
             </div>
@@ -195,12 +195,12 @@ export function CoursesPanel() {
                   {isUploading ? (
                     <>
                       <Loader2 className="w-3.5 h-3.5 ml-1 animate-spin" />
-                      جاري التحميل والتحليل...
+                      Uploading &amp; Analyzing...
                     </>
                   ) : (
                     <>
                       <Upload className="w-3.5 h-3.5 ml-1" />
-                      رفع وتحليل الكتاب
+                      Upload &amp; Analyze
                     </>
                   )}
                 </Button>
@@ -220,8 +220,8 @@ export function CoursesPanel() {
           ) : courses.length === 0 ? (
             <div className="text-center py-10">
               <BookOpen className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
-              <p className="text-xs text-muted-foreground mb-1">لا توجد كتب مرفوعة</p>
-              <p className="text-[10px] text-muted-foreground/50">ارفع كتب PDF لتدريب الوكيل</p>
+              <p className="text-xs text-muted-foreground mb-1">No books uploaded</p>
+              <p className="text-[10px] text-muted-foreground/50">Upload PDF books to train the agent</p>
             </div>
           ) : (
             <>
@@ -229,7 +229,7 @@ export function CoursesPanel() {
               <div className="flex items-center gap-2 px-2 py-1.5 mb-1">
                 <Sparkles className="w-3 h-3 text-emerald-400" />
                 <span className="text-[10px] text-emerald-400 font-medium">
-                  الوكيل يستخدم {courses.filter(c => c.status === 'ready').length} كتاب للتحليل
+                  Agent uses {courses.filter(c => c.status === 'ready').length} books for analysis
                 </span>
               </div>
 
@@ -255,12 +255,12 @@ export function CoursesPanel() {
                         {course.status === 'ready' ? (
                           <span className="flex items-center gap-0.5 text-[9px] text-emerald-400 font-medium">
                             <CheckCircle className="w-2.5 h-2.5" />
-                            جاهز للتحليل
+                            Ready
                           </span>
                         ) : (
                           <span className="flex items-center gap-0.5 text-[9px] text-yellow-400">
                             <Clock className="w-2.5 h-2.5" />
-                            قيد المعالجة
+                            Processing
                           </span>
                         )}
                       </div>
@@ -289,19 +289,19 @@ export function CoursesPanel() {
                     <div className="mt-2 pt-2 border-t border-border/30 animate-slide-up">
                       <div className="grid grid-cols-2 gap-2 text-[10px]">
                         <div className="bg-background/50 rounded-md p-1.5">
-                          <span className="text-muted-foreground">اسم الملف:</span>
+                          <span className="text-muted-foreground">File:</span>
                           <p className="text-foreground truncate mt-0.5" title={course.filename}>{course.filename}</p>
                         </div>
                         <div className="bg-background/50 rounded-md p-1.5">
-                          <span className="text-muted-foreground">الحالة:</span>
+                          <span className="text-muted-foreground">Status:</span>
                           <p className="text-emerald-400 font-medium mt-0.5">
-                            {course.status === 'ready' ? 'مفعّل' : 'قيد المعالجة'}
+                            {course.status === 'ready' ? 'Active' : 'Processing'}
                           </p>
                         </div>
                       </div>
                       <div className="mt-2 flex items-center gap-1.5 text-[10px] text-muted-foreground">
                         <GraduationCap className="w-3 h-3 text-emerald-400" />
-                        <span>هذا الكتاب يُستخدم كمرجع في كل تحليل</span>
+                        <span>This book is used as reference in every analysis</span>
                       </div>
                     </div>
                   )}
@@ -318,7 +318,7 @@ export function CoursesPanel() {
           <div className="flex items-center gap-2 text-[10px] text-emerald-400">
             <CheckCircle className="w-3 h-3" />
             <span className="font-medium">
-              {courses.filter(c => c.status === 'ready').length} كتاب نشط في قاعدة المعرفة
+              {courses.filter(c => c.status === 'ready').length} active books in knowledge base
             </span>
           </div>
         </div>

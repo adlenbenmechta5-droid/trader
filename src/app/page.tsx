@@ -6,7 +6,6 @@ import { CoursesPanel } from '@/components/trading/courses-panel';
 import { TradingViewTicker } from '@/components/trading/trading-chart';
 import { Button } from '@/components/ui/button';
 import {
-  MessageSquare,
   BookOpen,
   BarChart3,
   TrendingUp,
@@ -28,7 +27,6 @@ const TICKER_SYMBOLS = [
 
 export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [sidebarTab, setSidebarTab] = useState<'courses'>('courses');
 
   return (
     <div className="h-screen flex flex-col bg-[#0a0e17] overflow-hidden">
@@ -46,7 +44,7 @@ export default function Home() {
           </div>
           <div className="hidden sm:flex items-center gap-1 ml-4">
             <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-[10px] text-emerald-400">متصل</span>
+            <span className="text-[10px] text-emerald-400">Connected</span>
           </div>
         </div>
 
@@ -81,7 +79,7 @@ export default function Home() {
             <div className="flex items-center justify-between px-3 py-2 border-b border-border">
               <div className="flex items-center gap-1.5">
                 <BookOpen className="w-4 h-4 text-emerald-400" />
-                <span className="text-xs font-semibold text-foreground">المكتبة</span>
+                <span className="text-xs font-semibold text-foreground">Library</span>
               </div>
               <Button
                 variant="ghost"
