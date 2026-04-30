@@ -1,66 +1,6 @@
 import ZAI from 'z-ai-web-dev-sdk';
 import { getKnowledgeText } from '@/lib/store';
 
-const SYSTEM_PROMPT = `You are a Professional Trading Agent specialized in Cryptocurrency and Forex analysis.
-
-## Your Expertise:
-You have studied 6 specialized trading books and apply best practices from all of them. Your knowledge includes:
-- Price Action Analysis (from Paul Langer's Black Book of Forex Trading)
-- Harmonic Patterns: Butterfly, Cypher, Gartley, Crab, Bat, Shark (from Ultimate Harmonic Pattern Trading Guide)
-- Prop Trading Fundamentals, Stock In Play, Reading the Tape (from One Good Trade by Mike Bellafiore)
-- Personal Trading Model, Risk Management Framework (from Am Trades Personal Model)
-- Trading Psychology, Triple Screen, Elder-ray (from Alexandre Elder - Trading for a Living)
-- Asia Session Trading Strategy, Session-based Analysis (from Asia Session Trading Strategy)
-
-## Rules:
-1. ALWAYS provide a DETAILED and PROFESSIONAL analysis (minimum 500 words)
-2. Specify EXACT entry, stop loss, and take profit prices with numbers
-3. Reference SPECIFIC concepts from the 6 books you studied
-4. Use proper risk management (never risk more than 1-2% of capital)
-5. Write the analysis in Arabic with English technical terms in parentheses
-6. Structure your analysis clearly with sections and bullet points
-
-**IMPORTANT: Your response MUST start EXACTLY with these 7 lines before anything else:**
-DIRECTION: [Bullish or Bearish or Neutral]
-ENTRY: [exact price number like 63,500 or 1.0850]
-STOPLOSS: [exact price number]
-TP1: [exact price number]
-TP2: [exact price number]
-TP3: [exact price number]
-CONFIDENCE: [High or Medium or Low]
-
-Then write the detailed analysis below with:
-📊 **الاتجاه العام (Overall Trend)**: [explanation]
-
-🎯 **نقطة الدخول (Entry)**: [price and reasoning]
-
-🛑 **وقف الخسارة (Stop Loss)**: [price and reasoning]
-
-💰 **أهداف الربح (Take Profit)**:
-- TP1: [price] - [rationale]
-- TP2: [price] - [rationale]
-- TP3: [price] - [rationale]
-
-📐 **نسبة المخاطرة للعائد (Risk:Reward)**: [ratio]
-
-📝 **التفاصيل والسببية (Detailed Reasoning)**:
-[Minimum 300 words of detailed analysis covering:]
-- Current market structure and price action
-- Key technical levels (support, resistance, supply/demand zones)
-- Pattern recognition (harmonic patterns from the Ultimate Guide, candlestick patterns)
-- Volume and momentum analysis
-- Session-specific considerations (Asia/London/NY)
-- Risk management plan referencing Paul Langer's position sizing methods
-- What could invalidate this trade setup
-
-📚 **مراجع من الكتب (Book References)**:
-[Cite at least 2-3 specific concepts/strategies from the 6 books that support your analysis]
-
-⚠️ **تحذيرات المخاطر (Risk Warnings)**:
-[List specific risks and what to watch out for]
-
-Remember: You provide educational technical analysis, not financial advice.`;
-
 let zaiInstance: any = null;
 
 async function getZAI() {
@@ -88,68 +28,103 @@ export async function analyzeSymbol(symbol: string): Promise<AnalysisResult> {
   const zai = await getZAI();
   const knowledge = getKnowledgeText();
 
-  const userPrompt = `قم بتحليل الرمز التالي: **${symbol}**
+  // ==========================================
+  // STEP 1: Get structured trade data as JSON
+  // ==========================================
+  const dataPrompt = `You are a trading analyst. Analyze ${symbol} and return ONLY valid JSON. No other text.
 
-**مهم جداً:** يجب أن تبدأ إجابتك بالأسطر السبعة التالية بالضبط قبل أي شيء آخر:
+Return this exact JSON format:
+{"direction":"Bullish or Bearish or Neutral","entry":"price number","stoploss":"price number","tp1":"price number","tp2":"price number","tp3":"price number","confidence":"High or Medium or Low"}
 
-DIRECTION: [Bullish أو Bearish أو Neutral]
-ENTRY: [السعر الدقيق كرقم مثل 63,500 أو 1.0850]
-STOPLOSS: [السعر الدقيق]
-TP1: [السعر الدقيق]
-TP2: [السعر الدقيق]
-TP3: [السعر الدقيق]
-CONFIDENCE: [High أو Medium أو Low]
+Price examples: "63500" or "1.0850" or "148.50" - always as plain numbers without $ or commas.
 
-بعد هذه الأسطر السبعة، اكتب التحليل المفصل بالعربية مع المصطلحات الإنجليزية بين قوسين.
+${knowledge ? `Reference these trading concepts: ${knowledge.substring(0, 1000)}` : ''}`;
+
+  let structuredData: any = {};
+
+  try {
+    const dataCompletion = await zai.chat.completions.create({
+      messages: [
+        { role: 'system', content: 'You only respond with valid JSON. No explanation, no markdown, no code blocks. Just raw JSON.' },
+        { role: 'user', content: dataPrompt }
+      ],
+      temperature: 0.3,
+    });
+
+    let dataText = dataCompletion.choices[0]?.message?.content || '';
+    
+    // Clean up: remove markdown code blocks if present
+    dataText = dataText.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+    
+    // Try to parse JSON
+    structuredData = JSON.parse(dataText);
+  } catch (e) {
+    console.error('JSON parse failed, trying manual extraction:', e);
+    // Fallback: try to extract from raw text
+    structuredData = {};
+  }
+
+  // ==========================================
+  // STEP 2: Get detailed analysis text
+  // ==========================================
+  const analysisSystemPrompt = `أنت وكيل تداول محترف (Professional Trading Agent) متخصص في تحليل العملات الرقمية (Cryptocurrency) والفوركس (Forex).
+
+## خبراتك:
+لقد درست 6 كتب متخصصة في التداول:
+- The Black Book of Forex Trading (Paul Langer) - Price Action, Position Sizing
+- The Ultimate Harmonic Pattern Trading Guide - Butterfly, Cypher, Gartley, Crab, Bat, Shark
+- One Good Trade (Mike Bellafiore) - Prop Trading, Stocks In Play, Reading the Tape
+- Am Trades Personal Model - Risk Management, Personal Trading Strategy
+- Alexandre Elder - Trading for a Living - Trading Psychology, Triple Screen
+- Asia Session Trading Strategy - Session-based Analysis
+
+## قواعدك:
+1. قدم تحليلاً مفصلاً ومهنياً (على الأقل 500 كلمة)
+2. استشهد بمفاهيم محددة من الكتب الستة
+3. اكتب بالعربية مع المصطلحات الإنجليزية بين قوسين
+4. استخدم إدارة المخاطر (لا تخاطر بأكثر من 1-2% من رأس المال)`;
+
+  const directionHint = structuredData.direction || 'the current market';
+  const entryHint = structuredData.entry || '';
+  const slHint = structuredData.stoploss || '';
+
+  const analysisPrompt = `قم بتحليل الرمز: **${symbol}**
+
+${entryHint ? `البيانات المرجعية: Entry=${entryHint}, SL=${slHint}, TP1=${structuredData.tp1 || ''}, TP2=${structuredData.tp2 || ''}, TP3=${structuredData.tp3 || ''}` : ''}
 
 ${knowledge ? `=== معرفتك من الكتب الستة ===\n${knowledge}\n=== نهاية المعرفة ===` : ''}
+اكتب تحليلاً فنياً شاملاً بالعربية مع المصطلحات الإنجليزية بين قوسين. استشهد بمفاهيم من الكتب الستة. التحليل يجب أن يكون طويلاً ومفصلاً (على الأقل 500 كلمة).`;
 
-قم بإجراء تحليل فني شامل ومعمق مستند على الكتب وأعطني:
-1. الاتجاه العام (Trend) - مع توضيح السبب من الكتب (مفاهيم Price Action من Paul Langer)
-2. نقطة الدخول المقترحة (Entry) - أرقام دقيقة
-3. وقف الخسارة (Stop Loss) - بناءً على مستويات الدعم والمقاومة من الكتب
-4. ثلاثة أهداف ربح (TP1, TP2, TP3) - مع استخدام فيبوناتشي من Harmonic Patterns Guide
-5. نسبة المخاطرة للعائد (Risk:Reward)
-6. مستوى الثقة (Confidence) - مع التبرير
-7. التفاصيل والسببية (Reasoning) - استشهد بمفاهيم محددة من الكتب
-8. مراجع من الكتب - اذكر على الأقل 2-3 مفاهيم محددة من الكتب الستة
-9. تحذيرات المخاطر (Risk Warning)
+  let analysisText = '';
+  try {
+    const analysisCompletion = await zai.chat.completions.create({
+      messages: [
+        { role: 'system', content: analysisSystemPrompt },
+        { role: 'user', content: analysisPrompt }
+      ],
+      temperature: 0.7,
+    });
+    analysisText = analysisCompletion.choices[0]?.message?.content || '';
+  } catch (e) {
+    console.error('Analysis call failed:', e);
+    analysisText = 'Analysis generation failed. Please try again.';
+  }
 
-**التحليل يجب أن يكون طويلاً ومفصلاً (على الأقل 500 كلمة).**
-
-أجب بالعربية مع المصطلحات الإنجليزية بين قوسين.`;
-
-  const completion = await zai.chat.completions.create({
-    messages: [
-      { role: 'system', content: SYSTEM_PROMPT },
-      { role: 'user', content: userPrompt }
-    ],
-    temperature: 0.7,
-  });
-
-  const content = completion.choices[0]?.message?.content || '';
-
-  // Extract structured data - try simple header first, then fallback to Arabic text
+  // ==========================================
+  // STEP 3: Combine results
+  // ==========================================
   const result: AnalysisResult = {
     symbol,
-    direction: extractField(content, 'DIRECTION:') || extractField(content, 'الاتجاه', 'Trend') || 'Neutral',
-    entryPrice: extractPrice(content, 'ENTRY:') || extractPrice(content, 'نقطة الدخول', 'Entry'),
-    stopLoss: extractPrice(content, 'STOPLOSS:', 'STOP LOSS:') || extractPrice(content, 'وقف الخسارة', 'Stop Loss'),
-    takeProfit1: extractPrice(content, 'TP1:') || extractPrice(content, 'هدف الربح الأول', 'Take Profit 1'),
-    takeProfit2: extractPrice(content, 'TP2:') || extractPrice(content, 'هدف الربح الثاني', 'Take Profit 2'),
-    takeProfit3: extractPrice(content, 'TP3:') || extractPrice(content, 'هدف الربح الثالث', 'Take Profit 3'),
-    confidence: extractField(content, 'CONFIDENCE:') || extractField(content, 'الثقة', 'Confidence') || 'Medium',
-    // Clean the analysis: remove the raw DIRECTION/ENTRY/STOPLOSS/TP/CONFIDENCE lines
-    analysis: content
-      .replace(/^DIRECTION:.*$/im, '')
-      .replace(/^ENTRY:.*$/im, '')
-      .replace(/^STOPLOSS:.*$/im, '')
-      .replace(/^STOP LOSS:.*$/im, '')
-      .replace(/^TP[123]:.*$/im, '')
-      .replace(/^CONFIDENCE:.*$/im, '')
-      .replace(/\n{3,}/g, '\n\n')
-      .trim(),
-    reasoning: content,
+    direction: structuredData.direction || extractFromText(analysisText, ['صعودي', 'bullish', 'شراء']) ? 'Bullish' 
+      : extractFromText(analysisText, ['هبوطي', 'bearish', 'بيع']) ? 'Bearish' : 'Neutral',
+    entryPrice: structuredData.entry || findAnyPrice(analysisText, ['entry', 'دخول']),
+    stopLoss: structuredData.stoploss || findAnyPrice(analysisText, ['stop', 'وقف', 'خسارة']),
+    takeProfit1: structuredData.tp1 || findAnyPrice(analysisText, ['tp1', 'هدف أول']),
+    takeProfit2: structuredData.tp2 || findAnyPrice(analysisText, ['tp2', 'هدف ثاني']),
+    takeProfit3: structuredData.tp3 || findAnyPrice(analysisText, ['tp3', 'هدف ثالث']),
+    confidence: structuredData.confidence || 'Medium',
+    analysis: analysisText,
+    reasoning: analysisText,
     chartSymbol: normalizeSymbol(symbol),
   };
 
@@ -160,7 +135,9 @@ export async function chatWithAgent(message: string, history: Array<{role: strin
   const zai = await getZAI();
   const knowledge = getKnowledgeText();
 
-  const systemMessage = knowledge ? `${SYSTEM_PROMPT}\n\n${knowledge}` : SYSTEM_PROMPT;
+  const systemMessage = `أنت وكيل تداول محترف متخصص في العملات الرقمية والفوركس. درست 6 كتب متخصصة. أجب بالعربية مع المصطلحات الإنجليزية بين قوسين.
+  
+${knowledge ? `معرفتك من الكتب:\n${knowledge}` : ''}`;
 
   const messages = [
     { role: 'system', content: systemMessage },
@@ -173,56 +150,28 @@ export async function chatWithAgent(message: string, history: Array<{role: strin
     temperature: 0.7,
   });
 
-  return completion.choices[0]?.message?.content || 'Sorry, I could not process your request.';
+  return completion.choices[0]?.message?.content || 'عذراً، لم أتمكن من معالجة طلبك.';
 }
 
-/**
- * Find a keyword in text, then extract the first meaningful value after it.
- * Handles Arabic + English mixed text where non-matching chars sit between keyword and value.
- */
-function findKeywordArea(text: string, keyword: string, searchRadius: number = 200): string | null {
-  const idx = text.toLowerCase().indexOf(keyword.toLowerCase());
-  if (idx === -1) return null;
-  return text.substring(idx, Math.min(idx + searchRadius, text.length));
+// ==========================================
+// Robust fallback extractors
+// ==========================================
+
+function extractFromText(text: string, keywords: string[]): boolean {
+  const lower = text.toLowerCase();
+  return keywords.some(kw => lower.includes(kw));
 }
 
-function extractField(text: string, ...keywords: string[]): string | null {
-  for (const keyword of keywords) {
-    const area = findKeywordArea(text, keyword, 200);
-    if (!area) continue;
-    // Remove the keyword itself and any markdown/emoji prefix
-    const afterKeyword = area.replace(/^[^:]{0,80}:?/, '').trim();
-    // Take everything until the next section header (emoji + bold) or newline
-    const lines = afterKeyword.split('\n');
-    const value = lines[0].replace(/^[*\s:-]+/, '').trim();
-    if (value.length > 2) {
-      return value.substring(0, 200);
-    }
-  }
-  return null;
-}
-
-function extractPrice(text: string, ...keywords: string[]): string {
-  for (const keyword of keywords) {
-    const area = findKeywordArea(text, keyword, 300);
-    if (!area) continue;
-    // Skip the keyword line itself, look at what comes after
-    const afterKey = area.replace(new RegExp('^' + keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'), '');
-    // Price patterns ordered from most specific to least specific:
-    const pricePatterns = [
-      /\$(\d{1,3}(?:,\d{3})+(?:\.\d+)?)/,   // $63,500 or $1,234.56
-      /(\d{1,3}(?:,\d{3})+(?:\.\d+)?)/,       // 63,500 or 1,234.56
-      /(\d+\.\d{2,6})/,                         // 1.0850 or 0.6321 or 1234.56
-      /(\d{3,})/,                                // 63500
-    ];
-    for (const pattern of pricePatterns) {
-      const match = afterKey.match(pattern);
-      if (match && match[1]) {
-        const price = match[1].trim();
-        if (price.length >= 2) {
-          return price;
-        }
-      }
+function findAnyPrice(text: string, keywords: string[]): string {
+  const lower = text.toLowerCase();
+  for (const kw of keywords) {
+    const idx = lower.indexOf(kw);
+    if (idx === -1) continue;
+    const after = text.substring(idx, Math.min(idx + 100, text.length));
+    // Find first number in the area
+    const numMatch = after.match(/(\d{1,3}(?:,\d{3})+|\d+\.\d{2,6}|\d{3,})/);
+    if (numMatch && numMatch[1]) {
+      return numMatch[1].replace(/,/g, '');
     }
   }
   return 'N/A';
