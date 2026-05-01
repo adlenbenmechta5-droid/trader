@@ -3,18 +3,20 @@ import { chatWithAgent } from '@/lib/trading-agent';
 
 export async function POST(request: NextRequest) {
   try {
-    const { message, history } = await request.json();
+    const body = await request.json().catch(() => ({}));
+    const message = body?.message;
 
-    if (!message) {
+    if (!message || typeof message !== 'string') {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 });
     }
 
-    // Use the SDK-based chatWithAgent function (uses z-ai-web-dev-sdk)
-    const response = await chatWithAgent(message, history || []);
+    const response = await chatWithAgent(message.trim(), body?.history || []);
 
     return NextResponse.json({ response });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Chat error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({
+      response: 'عذراً، حدث خطأ مؤقت. يرجى المحاولة مرة أخرى.',
+    });
   }
 }

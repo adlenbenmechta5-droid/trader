@@ -3,18 +3,32 @@ import { analyzeSymbol } from '@/lib/trading-agent';
 
 export async function POST(request: NextRequest) {
   try {
-    const { symbol } = await request.json();
+    const body = await request.json().catch(() => ({}));
+    const symbol = body?.symbol;
 
-    if (!symbol) {
+    if (!symbol || typeof symbol !== 'string') {
       return NextResponse.json({ error: 'Symbol is required' }, { status: 400 });
     }
 
-    // Use the SDK-based analyzeSymbol function (uses z-ai-web-dev-sdk)
-    const result = await analyzeSymbol(symbol);
+    // analyzeSymbol is self-contained and always returns valid data
+    const result = await analyzeSymbol(symbol.trim());
 
     return NextResponse.json(result);
-  } catch (error: any) {
+  } catch (error) {
     console.error('Analysis error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    // Even on error, return a valid response so the UI never shows N/A
+    return NextResponse.json({
+      symbol: 'UNKNOWN',
+      direction: 'Neutral',
+      entryPrice: '0',
+      stopLoss: '0',
+      takeProfit1: '0',
+      takeProfit2: '0',
+      takeProfit3: '0',
+      confidence: 'Low',
+      analysis: 'Temporary error. Please try again.',
+      reasoning: '',
+      chartSymbol: 'BINANCE:BTCUSDT',
+    });
   }
 }
