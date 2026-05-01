@@ -1,13 +1,41 @@
-import ZAI from 'z-ai-web-dev-sdk';
 import { getKnowledgeText } from '@/lib/store';
 
-let zaiInstance: any = null;
+// ==========================================
+// Groq API - FREE, public, fast
+// OpenAI-compatible format
+// Get your key at: https://console.groq.com/keys
+// ==========================================
 
-async function getZAI() {
-  if (!zaiInstance) {
-    zaiInstance = await ZAI.create();
+const GROQ_BASE_URL = 'https://api.groq.com/openai/v1';
+const GROQ_MODEL = 'llama-3.3-70b-versatile';
+
+async function callGroq(messages: Array<{role: string, content: string}>, temperature: number = 0.7): Promise<string> {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) {
+    throw new Error('GROQ_API_KEY is not set. Add it in Vercel Environment Variables.');
   }
-  return zaiInstance;
+
+  const res = await fetch(`${GROQ_BASE_URL}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: GROQ_MODEL,
+      messages,
+      temperature,
+      max_tokens: 4096,
+    }),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Groq API error ${res.status}: ${errText}`);
+  }
+
+  const data = await res.json();
+  return data.choices?.[0]?.message?.content || '';
 }
 
 export interface AnalysisResult {
@@ -25,7 +53,6 @@ export interface AnalysisResult {
 }
 
 export async function analyzeSymbol(symbol: string): Promise<AnalysisResult> {
-  const zai = await getZAI();
   const knowledge = getKnowledgeText();
 
   // ==========================================
@@ -43,24 +70,19 @@ ${knowledge ? `Reference these trading concepts: ${knowledge.substring(0, 1000)}
   let structuredData: any = {};
 
   try {
-    const dataCompletion = await zai.chat.completions.create({
-      messages: [
+    const dataText = await callGroq(
+      [
         { role: 'system', content: 'You only respond with valid JSON. No explanation, no markdown, no code blocks. Just raw JSON.' },
         { role: 'user', content: dataPrompt }
       ],
-      temperature: 0.3,
-    });
+      0.3
+    );
 
-    let dataText = dataCompletion.choices[0]?.message?.content || '';
-    
     // Clean up: remove markdown code blocks if present
-    dataText = dataText.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
-    
-    // Try to parse JSON
-    structuredData = JSON.parse(dataText);
+    let cleaned = dataText.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+    structuredData = JSON.parse(cleaned);
   } catch (e) {
     console.error('JSON parse failed, trying manual extraction:', e);
-    // Fallback: try to extract from raw text
     structuredData = {};
   }
 
@@ -84,27 +106,24 @@ ${knowledge ? `Reference these trading concepts: ${knowledge.substring(0, 1000)}
 3. اكتب بالعربية مع المصطلحات الإنجليزية بين قوسين
 4. استخدم إدارة المخاطر (لا تخاطر بأكثر من 1-2% من رأس المال)`;
 
-  const directionHint = structuredData.direction || 'the current market';
   const entryHint = structuredData.entry || '';
-  const slHint = structuredData.stoploss || '';
 
   const analysisPrompt = `قم بتحليل الرمز: **${symbol}**
 
-${entryHint ? `البيانات المرجعية: Entry=${entryHint}, SL=${slHint}, TP1=${structuredData.tp1 || ''}, TP2=${structuredData.tp2 || ''}, TP3=${structuredData.tp3 || ''}` : ''}
+${entryHint ? `البيانات المرجعية: Entry=${structuredData.entry}, SL=${structuredData.stoploss}, TP1=${structuredData.tp1 || ''}, TP2=${structuredData.tp2 || ''}, TP3=${structuredData.tp3 || ''}` : ''}
 
 ${knowledge ? `=== معرفتك من الكتب الستة ===\n${knowledge}\n=== نهاية المعرفة ===` : ''}
 اكتب تحليلاً فنياً شاملاً بالعربية مع المصطلحات الإنجليزية بين قوسين. استشهد بمفاهيم من الكتب الستة. التحليل يجب أن يكون طويلاً ومفصلاً (على الأقل 500 كلمة).`;
 
   let analysisText = '';
   try {
-    const analysisCompletion = await zai.chat.completions.create({
-      messages: [
+    analysisText = await callGroq(
+      [
         { role: 'system', content: analysisSystemPrompt },
         { role: 'user', content: analysisPrompt }
       ],
-      temperature: 0.7,
-    });
-    analysisText = analysisCompletion.choices[0]?.message?.content || '';
+      0.7
+    );
   } catch (e) {
     console.error('Analysis call failed:', e);
     analysisText = 'Analysis generation failed. Please try again.';
@@ -115,8 +134,8 @@ ${knowledge ? `=== معرفتك من الكتب الستة ===\n${knowledge}\n==
   // ==========================================
   const result: AnalysisResult = {
     symbol,
-    direction: structuredData.direction || extractFromText(analysisText, ['صعودي', 'bullish', 'شراء']) ? 'Bullish' 
-      : extractFromText(analysisText, ['هبوطي', 'bearish', 'بيع']) ? 'Bearish' : 'Neutral',
+    direction: structuredData.direction || (extractFromText(analysisText, ['صعودي', 'bullish', 'شراء']) ? 'Bullish'
+      : extractFromText(analysisText, ['هبوطي', 'bearish', 'بيع']) ? 'Bearish' : 'Neutral'),
     entryPrice: structuredData.entry || findAnyPrice(analysisText, ['entry', 'دخول']),
     stopLoss: structuredData.stoploss || findAnyPrice(analysisText, ['stop', 'وقف', 'خسارة']),
     takeProfit1: structuredData.tp1 || findAnyPrice(analysisText, ['tp1', 'هدف أول']),
@@ -132,11 +151,10 @@ ${knowledge ? `=== معرفتك من الكتب الستة ===\n${knowledge}\n==
 }
 
 export async function chatWithAgent(message: string, history: Array<{role: string, content: string}> = []): Promise<string> {
-  const zai = await getZAI();
   const knowledge = getKnowledgeText();
 
   const systemMessage = `أنت وكيل تداول محترف متخصص في العملات الرقمية والفوركس. درست 6 كتب متخصصة. أجب بالعربية مع المصطلحات الإنجليزية بين قوسين.
-  
+
 ${knowledge ? `معرفتك من الكتب:\n${knowledge}` : ''}`;
 
   const messages = [
@@ -145,12 +163,8 @@ ${knowledge ? `معرفتك من الكتب:\n${knowledge}` : ''}`;
     { role: 'user', content: message }
   ];
 
-  const completion = await zai.chat.completions.create({
-    messages,
-    temperature: 0.7,
-  });
-
-  return completion.choices[0]?.message?.content || 'عذراً، لم أتمكن من معالجة طلبك.';
+  const response = await callGroq(messages, 0.7);
+  return response || 'عذراً، لم أتمكن من معالجة طلبك.';
 }
 
 // ==========================================
@@ -168,7 +182,6 @@ function findAnyPrice(text: string, keywords: string[]): string {
     const idx = lower.indexOf(kw);
     if (idx === -1) continue;
     const after = text.substring(idx, Math.min(idx + 100, text.length));
-    // Find first number in the area
     const numMatch = after.match(/(\d{1,3}(?:,\d{3})+|\d+\.\d{2,6}|\d{3,})/);
     if (numMatch && numMatch[1]) {
       return numMatch[1].replace(/,/g, '');
