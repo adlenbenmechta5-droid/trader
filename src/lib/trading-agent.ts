@@ -272,7 +272,7 @@ function generateChatResponse(message: string): string {
 ### من The Black Book of Forex Trading:
 - لا تخاطر بأكثر من **1-2%** من رأس المال في كل صفقة
 - استخدم دائماً **Stop Loss** - لا تداول أبداً بدونه
-- حساب حجم الصفقة (Position Sizing): `حجم الصفقة = (المبلغ المسموح بخسارته) / (المسافة بين سعر الدخول ووقف الخسارة)`
+- حساب حجم الصفقة (Position Sizing): حجم الصفقة = (المبلغ المسموح بخسارته) / (المسافة بين سعر الدخول ووقف الخسارة)
 
 ### من Am Trades Personal Model:
 - **Fixed Fractional**: المخاطرة نسبة ثابتة من رأس المال (1-2%)
